@@ -47,12 +47,16 @@ lint: vet
 check: fmt vet test
 
 # Install / uninstall
-.PHONY: install uninstall
+.PHONY: install install-home uninstall
 install: build
 	cp $(BINARY) $(GOPATH)/bin/$(BINARY) 2>/dev/null || cp $(BINARY) $(HOME)/go/bin/$(BINARY)
 
+install-home: build
+	mkdir -p $(HOME)/bin
+	cp $(BINARY) $(HOME)/bin/$(BINARY)
+
 uninstall:
-	rm -f $(GOPATH)/bin/$(BINARY) 2>/dev/null || rm -f $(HOME)/go/bin/$(BINARY)
+	rm -f $(GOPATH)/bin/$(BINARY) 2>/dev/null; rm -f $(HOME)/go/bin/$(BINARY); rm -f $(HOME)/bin/$(BINARY)
 
 # Maintenance
 .PHONY: tidy clean

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -100,6 +101,18 @@ func pollLoop(syncer *RepoSyncer, interval time.Duration, stop chan struct{}) {
 			}
 		}
 	}
+}
+
+func cmdInit(configPath string) {
+	if err := InitConfig(configPath); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	fmt.Printf("Config file created at: %s\n\n", configPath)
+	fmt.Println("Next steps:")
+	fmt.Println("  1. Edit the config file to add your repositories")
+	fmt.Println("  2. Run 'git-syncer sync --verbose' to test a one-shot sync")
+	fmt.Println("  3. Run 'git-syncer start' to start the background daemon")
 }
 
 func cmdStop() {

@@ -271,6 +271,70 @@ func TestValidateConfig_NotAGitRepo(t *testing.T) {
 	}
 }
 
+func TestInitConfig_CreatesFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "subdir", "config.toml")
+
+	if err := InitConfig(path); err != nil {
+		t.Fatalf("InitConfig failed: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading created config: %v", err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, "[defaults]") {
+		t.Error("config missing [defaults] section")
+	}
+	if !strings.Contains(content, "[[repos]]") {
+		t.Error("config missing [[repos]] section")
+	}
+	if !strings.Contains(content, "debounce_seconds") {
+		t.Error("config missing debounce_seconds")
+	}
+	if !strings.Contains(content, "poll_interval_seconds") {
+		t.Error("config missing poll_interval_seconds")
+	}
+	// Should contain comments
+	if !strings.Contains(content, "#") {
+		t.Error("config missing comments")
+	}
+}
+
+func TestInitConfig_AlreadyExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	os.WriteFile(path, []byte("existing"), 0644)
+
+	err := InitConfig(path)
+	if err == nil {
+		t.Fatal("expected error when config already exists")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestInitConfig_ValidTOML(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+
+	if err := InitConfig(path); err != nil {
+		t.Fatalf("InitConfig failed: %v", err)
+	}
+
+	// The generated config should be parseable
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("generated config is not valid: %v", err)
+	}
+	if len(cfg.Repos) != 1 {
+		t.Errorf("expected 1 example repo, got %d", len(cfg.Repos))
+	}
+}
+
 func TestDefaultConfigPath(t *testing.T) {
 	path := DefaultConfigPath()
 	if path == "" {

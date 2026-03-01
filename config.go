@@ -34,6 +34,55 @@ func DefaultConfigPath() string {
 	return filepath.Join(home, ".config", "git-syncer", "config.toml")
 }
 
+const defaultConfigTemplate = `# git-syncer configuration
+# Documentation: https://github.com/minhajuddin/git-syncer
+
+# Default settings applied to all repos unless overridden per-repo.
+[defaults]
+
+# How long to wait (in seconds) after the last file change before
+# committing and pushing. This batches rapid edits into a single commit.
+debounce_seconds = 60
+
+# How often (in seconds) to pull from the remote to pick up changes
+# made on other machines.
+poll_interval_seconds = 300
+
+# Add one [[repos]] block for each repository you want to keep in sync.
+# At minimum, "path" is required. All other fields have sensible defaults.
+#
+# [[repos]]
+# path = "~/notes"           # Path to the git repo (~ is expanded)
+# remote = "origin"          # Git remote name (default: origin)
+# branch = "main"            # Branch to sync (default: current branch)
+# debounce_seconds = 30      # Override the default debounce for this repo
+# poll_interval_seconds = 60 # Override the default poll interval for this repo
+
+[[repos]]
+path = "~/notes"
+remote = "origin"
+branch = "main"
+`
+
+// InitConfig creates a default config file at the given path.
+// Returns an error if the file already exists.
+func InitConfig(path string) error {
+	if _, err := os.Stat(path); err == nil {
+		return fmt.Errorf("config file already exists: %s", path)
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("creating config directory: %w", err)
+	}
+
+	if err := os.WriteFile(path, []byte(defaultConfigTemplate), 0644); err != nil {
+		return fmt.Errorf("writing config file: %w", err)
+	}
+
+	return nil
+}
+
 func LoadConfig(path string) (*Config, error) {
 	cfg := &Config{
 		Defaults: Defaults{

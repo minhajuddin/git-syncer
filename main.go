@@ -12,6 +12,7 @@ Usage:
   git-syncer <command> [flags]
 
 Commands:
+  init      Create a default config file with examples
   start     Start the daemon (backgrounds itself, writes PID file)
   stop      Stop the running daemon
   status    Show daemon status
@@ -52,6 +53,8 @@ func main() {
 	fs.Parse(os.Args[2:])
 
 	switch command {
+	case "init":
+		cmdInit(*configPath)
 	case "start":
 		cmdStart(*configPath, *verbose)
 	case "sync":

@@ -3,10 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 )
+
+// NOTE: We intentionally do NOT call launchctl/systemctl programmatically.
+// On macOS, calling launchctl from a Go binary can trigger security restrictions
+// that kill the process. Instead, we write the service file and print the
+// commands for the user to run.
 
 func launchdPlistPath() string {
 	home, err := os.UserHomeDir()
@@ -121,6 +125,7 @@ func installLaunchd(exePath, configPath string) {
 	fmt.Println("Detected OS: macOS")
 	fmt.Printf("Binary path: %s\n", exePath)
 	fmt.Printf("Config path: %s\n", configPath)
+	fmt.Println()
 
 	if _, err := os.Stat(plistPath); err == nil {
 		fmt.Fprintf(os.Stderr, "Error: service file already exists at %s\n", plistPath)
@@ -138,17 +143,12 @@ func installLaunchd(exePath, configPath string) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Loading service...")
-	cmd := exec.Command("launchctl", "load", plistPath)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading service: %s: %v\n", string(out), err)
-		os.Exit(1)
-	}
-
+	fmt.Println("Done!")
 	fmt.Println()
-	fmt.Println("Done! git-syncer will now start automatically at login.")
+	fmt.Println("To start the service now and at every login, run:")
+	fmt.Printf("  launchctl load %s\n", plistPath)
 	fmt.Println()
-	fmt.Println("To verify, run:")
+	fmt.Println("To verify it's running:")
 	fmt.Println("  launchctl list | grep git-syncer")
 	fmt.Println()
 	fmt.Println("To view logs:")
@@ -164,6 +164,7 @@ func installSystemd(exePath, configPath string) {
 	fmt.Println("Detected OS: Linux")
 	fmt.Printf("Binary path: %s\n", exePath)
 	fmt.Printf("Config path: %s\n", configPath)
+	fmt.Println()
 
 	if _, err := os.Stat(unitPath); err == nil {
 		fmt.Fprintf(os.Stderr, "Error: service file already exists at %s\n", unitPath)
@@ -181,22 +182,13 @@ func installSystemd(exePath, configPath string) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Reloading systemd daemon...")
-	if out, err := exec.Command("systemctl", "--user", "daemon-reload").CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error reloading systemd: %s: %v\n", string(out), err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Enabling and starting service...")
-	if out, err := exec.Command("systemctl", "--user", "enable", "--now", "git-syncer").CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error enabling service: %s: %v\n", string(out), err)
-		os.Exit(1)
-	}
-
+	fmt.Println("Done!")
 	fmt.Println()
-	fmt.Println("Done! git-syncer will now start automatically at login.")
+	fmt.Println("To enable and start the service, run:")
+	fmt.Println("  systemctl --user daemon-reload")
+	fmt.Println("  systemctl --user enable --now git-syncer")
 	fmt.Println()
-	fmt.Println("To verify, run:")
+	fmt.Println("To verify it's running:")
 	fmt.Println("  systemctl --user status git-syncer")
 	fmt.Println()
 	fmt.Println("To view logs:")
@@ -227,21 +219,19 @@ func uninstallLaunchd() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Unloading service...")
-	cmd := exec.Command("launchctl", "unload", plistPath)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: launchctl unload: %s: %v\n", string(out), err)
-	}
-
 	fmt.Printf("Removing %s...\n", plistPath)
 	if err := os.Remove(plistPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error removing plist: %v\n", err)
 		os.Exit(1)
 	}
 
+	fmt.Println("Done! Service file removed.")
 	fmt.Println()
-	fmt.Println("Done! git-syncer service has been removed.")
-	fmt.Println("The daemon will no longer start at login.")
+	fmt.Println("If the service was loaded, unload it with:")
+	fmt.Printf("  launchctl unload %s\n", plistPath)
+	fmt.Println()
+	fmt.Println("Or stop the running daemon with:")
+	fmt.Println("  git-syncer stop")
 }
 
 func uninstallSystemd() {
@@ -253,23 +243,15 @@ func uninstallSystemd() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Disabling and stopping service...")
-	if out, err := exec.Command("systemctl", "--user", "disable", "--now", "git-syncer").CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: systemctl disable: %s: %v\n", string(out), err)
-	}
-
 	fmt.Printf("Removing %s...\n", unitPath)
 	if err := os.Remove(unitPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error removing unit file: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Reloading systemd daemon...")
-	if out, err := exec.Command("systemctl", "--user", "daemon-reload").CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: systemctl daemon-reload: %s: %v\n", string(out), err)
-	}
-
+	fmt.Println("Done! Service file removed.")
 	fmt.Println()
-	fmt.Println("Done! git-syncer service has been removed.")
-	fmt.Println("The daemon will no longer start at login.")
+	fmt.Println("To finish cleanup, run:")
+	fmt.Println("  systemctl --user disable --now git-syncer")
+	fmt.Println("  systemctl --user daemon-reload")
 }

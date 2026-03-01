@@ -17,6 +17,7 @@ Commands:
   stop      Stop the running daemon
   status    Show daemon status
   sync      Run one sync cycle for all repos and exit
+  service   Manage OS service (install/uninstall)
 
 Flags:
   -c, --config    Config file path (default: ~/.config/git-syncer/config.toml)
@@ -38,6 +39,9 @@ func main() {
 		return
 	case "status":
 		cmdStatus()
+		return
+	case "service":
+		cmdService()
 		return
 	case "help", "--help", "-h":
 		fmt.Print(usage)

@@ -115,6 +115,30 @@ func cmdInit(configPath string) {
 	fmt.Println("  3. Run 'git-syncer start' to start the background daemon")
 }
 
+const serviceUsage = `Usage: git-syncer service <action>
+
+Actions:
+  install     Install the OS service (launchd on macOS, systemd on Linux)
+  uninstall   Remove the OS service
+`
+
+func cmdService() {
+	if len(os.Args) < 3 {
+		fmt.Print(serviceUsage)
+		os.Exit(1)
+	}
+	switch os.Args[2] {
+	case "install":
+		serviceInstall()
+	case "uninstall":
+		serviceUninstall()
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown action: %s\n\n", os.Args[2])
+		fmt.Print(serviceUsage)
+		os.Exit(1)
+	}
+}
+
 func cmdStop() {
 	if err := StopDaemon(); err != nil {
 		log.Fatalf("Error: %v", err)
